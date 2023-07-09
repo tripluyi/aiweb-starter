@@ -1,3 +1,4 @@
+'use client'
 // Speech to text by microphone
 import _ from 'lodash'
 import React, { useEffect, useState, useCallback } from 'react'

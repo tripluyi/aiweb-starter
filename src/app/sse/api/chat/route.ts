@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { PaLMCall, PaLMByLangChain } from '../shared/PaLM'
+import { getStreamMessage } from '../shared/openai'
 
 export async function GET(request: NextRequest) {
-    const result = {}
+    const msg = request?.nextUrl?.searchParams?.get('msg') || ''
+    const result = await PaLMByLangChain({
+        msgContent: msg,
+    })
+    await getStreamMessage()
     return NextResponse.json({ ...result })
 }
 

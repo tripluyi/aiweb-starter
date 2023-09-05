@@ -1,10 +1,26 @@
+'use client'
 import './style.css'
+import { useEffect, useState } from 'react'
 
 const Sse = () => {
+    const [answer, setAnswer] = useState<string>('')
+    useEffect(() => {}, [])
+
+    const handleSSE = async () => {
+        const eventSource = new EventSource('/sse/api/stream')
+        // 监听 SSE 事件的消息
+        eventSource.onmessage = function (event) {
+            console.log('Received message:', event.data)
+        }
+    }
+
     return (
         <div className=" w-screen bg-gray-800">
             <div className=" mx-auto my-2 w-[968px] relative">
                 <h1>SSE</h1>
+                <div className="flex flex-row text-white cursor-pointer" onClick={handleSSE}>
+                    click Me
+                </div>
                 <QuestionInput />
             </div>
         </div>

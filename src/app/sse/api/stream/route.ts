@@ -9,16 +9,6 @@ export async function GET(request: NextRequest) {
     const encoder = new TextEncoder()
     const sseUint8Array = encoder.encode(sseData)
 
-    // // 创建 TransformStream
-    // const transformStream = new TransformStream();
-    // 创建可读流
-    const stream = new ReadableStream({
-        start(controller) {
-            controller.enqueue(sseUint8Array)
-            controller.close()
-        },
-    })
-
     // 创建 TransformStream
     const transformStream = new TransformStream({
         transform(chunk, controller) {
@@ -28,8 +18,6 @@ export async function GET(request: NextRequest) {
 
     // 创建 SSE 响应
     let response = new Response(transformStream.readable)
-    // 创建 SSE 响应
-    // const response: NextResponse = new NextResponse();
 
     // 设置响应头，指定使用 SSE
     response.headers.set('Content-Type', 'text/event-stream')
@@ -38,7 +26,7 @@ export async function GET(request: NextRequest) {
     response.headers.set('Transfer-Encoding', 'chunked')
 
     const writer = transformStream.writable.getWriter()
-    writer.write(stream)
+    writer.write(sseUint8Array)
 
     // 定义一个计数器
     let counter = 0
@@ -46,23 +34,17 @@ export async function GET(request: NextRequest) {
     // 每秒发送一个消息
     const interval = setInterval(() => {
         counter++
+
+        if (counter > 10) {
+            clearInterval(interval)
+            return
+        }
+
         const message = `event: message\ndata: Message ${counter}\n\n`
         const messageUint8Array = encoder.encode(message)
         writer.write(messageUint8Array)
     }, 1000)
 
-    // 当客户端断开连接时清除定时器
-    response.body
-        ?.getReader()
-        .closed.then(() => {
-            // clearInterval(interval);
-            writer.close()
-        })
-        .catch(e => {
-            console.log(`error of close`, e)
-        })
-
-    // 返回 SSE 响应
     return response
 }
 
@@ -92,5 +74,40 @@ export async function sseHandler(req: NextApiRequest, res: NextApiResponse) {
     res.on('close', () => {
         clearInterval(interval)
         res.end()
+    })
+}
+
+export async function XGET(request: NextRequest) {
+    const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
+    // 将 SSE 数据编码为 Uint8Array
+    const encoder = new TextEncoder()
+    const sseUint8Array = encoder.encode(sseData)
+
+    // 创建 TransformStream
+    const transformStream = new TransformStream({
+        transform(chunk, controller) {
+            controller.enqueue(chunk)
+        },
+    })
+    const writer = transformStream.writable.getWriter()
+    writer.write(sseUint8Array)
+
+    // 定义一个计数器
+    let counter = 0
+
+    // 每秒发送一个消息
+    const interval = setInterval(() => {
+        counter++
+        const message = `event: message\ndata: Message ${counter}\n\n`
+        const messageUint8Array = encoder.encode(message)
+        writer.write(messageUint8Array)
+    }, 1000)
+
+    return new Response(transformStream.readable, {
+        headers: {
+            'Content-Type': 'text/event-stream',
+            Connection: 'keep-alive',
+            'Cache-Control': 'no-cache, no-transform',
+        },
     })
 }

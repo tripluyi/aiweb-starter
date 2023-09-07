@@ -27,6 +27,7 @@
   "dependencies": {
     "@google-ai/generativelanguage": "^0.2.0",
     "@huggingface/inference": "^2.5.2",
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@pinecone-database/pinecone": "^0.1.6",
     "@reduxjs/toolkit": "^1.9.5",
     "@types/node": "20.3.2",

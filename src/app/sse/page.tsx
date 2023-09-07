@@ -1,17 +1,32 @@
 'use client'
 import './style.css'
 import { useEffect, useState } from 'react'
+import { fetchEventSource } from '@microsoft/fetch-event-source'
 
 const Sse = () => {
     const [answer, setAnswer] = useState<string>('')
     useEffect(() => {}, [])
 
     const handleSSE = async () => {
-        const eventSource = new EventSource('/sse/api/stream')
-        // 监听 SSE 事件的消息
-        eventSource.onmessage = function (event) {
-            console.log('Received message:', event.data)
-        }
+        // const eventSource = new EventSource('/sse/api/stream')
+        // // 监听 SSE 事件的消息
+        // eventSource.onmessage = function (event) {
+        //     console.log('Received message:', event.data)
+        // }
+
+        const eventSourcePost = fetchEventSource('/sse/api/stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                foo: 'bar',
+            }),
+            onmessage: function (event) {
+                // console.log('Received message:', event.data)
+                setAnswer(answer => `${answer}\r\n${event.data}`)
+            },
+        })
     }
 
     return (
@@ -21,6 +36,7 @@ const Sse = () => {
                 <div className="flex flex-row text-white cursor-pointer" onClick={handleSSE}>
                     click Me
                 </div>
+                <div className="flex text-white">{answer}</div>
                 <QuestionInput />
             </div>
         </div>

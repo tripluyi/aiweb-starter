@@ -3,11 +3,21 @@ import { getStreamMessage } from '../shared/openai'
 
 import { NextApiRequest, NextApiResponse } from 'next'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
     const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
     // 将 SSE 数据编码为 Uint8Array
     const encoder = new TextEncoder()
+    const decoder = new TextDecoder()
     const sseUint8Array = encoder.encode(sseData)
+
+    let rbody = {}
+    try {
+        const rtext = await request.text()
+        rbody = (rtext && JSON.parse(rtext)) || {}
+    } catch (e) {}
+
+    // @ts-ignore
+    const { foo = '' } = rbody
 
     // 创建 TransformStream
     const transformStream = new TransformStream({
@@ -17,7 +27,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 创建 SSE 响应
-    let response = new Response(transformStream.readable)
+    let response = new NextResponse(transformStream.readable)
 
     // 设置响应头，指定使用 SSE
     response.headers.set('Content-Type', 'text/event-stream')
@@ -35,15 +45,15 @@ export async function GET(request: NextRequest) {
     const interval = setInterval(() => {
         counter++
 
-        if (counter > 10) {
+        if (counter > 100) {
             clearInterval(interval)
             return
         }
 
-        const message = `event: message\ndata: Message ${counter}\n\n`
+        const message = `event: message\ndata: Message ${counter} - ${foo}\n\n`
         const messageUint8Array = encoder.encode(message)
         writer.write(messageUint8Array)
-    }, 1000)
+    }, 100)
 
     return response
 }

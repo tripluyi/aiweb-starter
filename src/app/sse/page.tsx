@@ -7,12 +7,21 @@ const Sse = () => {
     const [answer, setAnswer] = useState<string>('')
     useEffect(() => {}, [])
 
-    const handleSSE = async (msg: string) => {
-        // const eventSource = new EventSource('/sse/api/stream')
-        // // 监听 SSE 事件的消息
-        // eventSource.onmessage = function (event) {
-        //     console.log('Received message:', event.data)
-        // }
+    const handleSSE = async (msg: string, isGET?: boolean) => {
+        if (isGET) {
+            const eventSource = new EventSource('/sse/api/stream?message=' + msg)
+            // 监听 SSE 事件的消息
+            eventSource.onmessage = function (event) {
+                console.log('Received message:', event.data)
+                if (event.data.includes('__completed__')) {
+                    console.log(`this is completed`)
+                    setAnswer(answer => `${answer}\n`)
+                } else {
+                    setAnswer(answer => `${answer}${event.data.replace(/\\n/g, '\n')}`)
+                }
+            }
+            return
+        }
 
         const ctrl = new AbortController()
         const eventSourcePost = fetchEventSource('/sse/api/stream', {
@@ -41,7 +50,7 @@ const Sse = () => {
         <div className=" w-screen bg-gray-800">
             <div className=" mx-auto my-2 w-[968px] relative">
                 <h1>SSE</h1>
-                <div className="flex flex-row text-white cursor-pointer">click Me</div>
+                {/* <div className="flex flex-row text-white cursor-pointer">click Me</div> */}
                 <div className="flex text-white whitespace-pre-line">{answer}</div>
                 <QuestionInput callback={handleSSE} />
             </div>

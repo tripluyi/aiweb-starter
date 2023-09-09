@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStreamMessage } from '../shared/openai'
-
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export async function GET(request: NextRequest) {
@@ -50,18 +49,20 @@ const SSEResponse = (humanMessage: string) => {
 
     const writer = transformStream.writable.getWriter()
     // writer.write(sseUint8Array)
-
+    const eventMsgHeader = encoder.encode(`event: message\n`)
     getStreamMessage({
         humanMessage: humanMessage,
         streamHanler: (token: string) => {
-            const message = `event: message\ndata: ${token.replace(/\n/, '\\n')}\n\n`
+            writer.write(eventMsgHeader)
+            const message = `data: ${token.replace(/\n/, '\\n')}\n\n`
             // console.log(`message`, token, message)
             const messageUint8Array = encoder.encode(message)
             writer.write(messageUint8Array)
         },
         getAllHandler: (totalContent: string) => {
+            writer.write(eventMsgHeader)
             console.log(`totalContent==>`, totalContent)
-            const messageUint8Array = encoder.encode('event: message\ndata: __completed__\n\n')
+            const messageUint8Array = encoder.encode('data: __completed__\n\n')
             writer.write(messageUint8Array)
         },
     })

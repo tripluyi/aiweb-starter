@@ -3,13 +3,16 @@ import { getStreamMessage } from '../shared/openai'
 
 import { NextApiRequest, NextApiResponse } from 'next'
 
-export async function POST(request: NextRequest) {
-    const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
-    // 将 SSE 数据编码为 Uint8Array
-    const encoder = new TextEncoder()
-    const decoder = new TextDecoder()
-    const sseUint8Array = encoder.encode(sseData)
+export async function GET(request: NextRequest) {
+    let humanMessage = ''
+    try {
+        humanMessage = request.nextUrl.searchParams.get('message') || ''
+    } catch (e) {}
 
+    return SSEResponse(humanMessage)
+}
+
+export async function POST(request: NextRequest) {
     let rbody = {}
     try {
         const rtext = await request.text()
@@ -17,7 +20,17 @@ export async function POST(request: NextRequest) {
     } catch (e) {}
 
     // @ts-ignore
-    const { foo = '' } = rbody
+    const { message: humanMessage = '' } = rbody
+
+    return SSEResponse(humanMessage)
+}
+
+const SSEResponse = (humanMessage: string) => {
+    // 将 SSE 数据编码为 Uint8Array
+    const encoder = new TextEncoder()
+    const decoder = new TextDecoder()
+    const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
+    const sseUint8Array = encoder.encode(sseData)
 
     // 创建 TransformStream
     const transformStream = new TransformStream({
@@ -30,37 +43,51 @@ export async function POST(request: NextRequest) {
     let response = new NextResponse(transformStream.readable)
 
     // 设置响应头，指定使用 SSE
-    response.headers.set('Content-Type', 'text/event-stream')
+    response.headers.set('Content-Type', 'text/event-stream; charset=utf-8')
     response.headers.set('Cache-Control', 'no-cache')
     response.headers.set('Connection', 'keep-alive')
     response.headers.set('Transfer-Encoding', 'chunked')
 
     const writer = transformStream.writable.getWriter()
-    writer.write(sseUint8Array)
+    // writer.write(sseUint8Array)
 
-    // 定义一个计数器
-    let counter = 0
-
-    // 每秒发送一个消息
-    const interval = setInterval(() => {
-        counter++
-
-        if (counter > 15) {
-            clearInterval(interval)
-            const message = `event: message\ndata: End\n\n`
+    getStreamMessage({
+        humanMessage: humanMessage,
+        streamHanler: (token: string) => {
+            const message = `event: message\ndata: ${token.replace(/\n/, '\\n')}\n\n`
+            // console.log(`message`, token, message)
             const messageUint8Array = encoder.encode(message)
             writer.write(messageUint8Array)
-            return
-        }
+        },
+        getAllHandler: (totalContent: string) => {
+            console.log(`totalContent==>`, totalContent)
+            const messageUint8Array = encoder.encode('event: message\ndata: __completed__\n\n')
+            writer.write(messageUint8Array)
+        },
+    })
 
-        const message = `event: message\ndata: Message ${counter} - ${foo}\n\n`
-        const messageUint8Array = encoder.encode(message)
-        writer.write(messageUint8Array)
-    }, 100)
+    // // 定义一个计数器
+    // let counter = 0
+
+    // // 每秒发送一个消息
+    // const interval = setInterval(() => {
+    //     counter++
+
+    //     if (counter > 15) {
+    //         clearInterval(interval)
+    //         const message = `event: message\ndata: End\n\n`
+    //         const messageUint8Array = encoder.encode(message)
+    //         writer.write(messageUint8Array)
+    //         return
+    //     }
+
+    //     const message = `event: message\ndata: Message ${counter} - ${humanMessage}\n\n`
+    //     const messageUint8Array = encoder.encode(message)
+    //     writer.write(messageUint8Array)
+    // }, 100)
 
     return response
 }
-
 export async function sseHandler(req: NextApiRequest, res: NextApiResponse) {
     // 设置响应头，指定使用 SSE
     res.setHeader('Content-Type', 'text/event-stream')

@@ -21,13 +21,16 @@ const Sse = () => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                foo: msg,
+                message: msg,
             }),
             onmessage: function (event) {
-                // console.log('Received message:', event.data)
-                setAnswer(answer => `${answer}\r\n${event.data}`)
-                if (event.data.includes('End')) {
+                console.log('Received message:', event.data)
+                if (event.data.includes('__completed__')) {
+                    console.log(`this is completed`)
+                    setAnswer(answer => `${answer}\n`)
                     ctrl.abort()
+                } else {
+                    setAnswer(answer => `${answer}${event.data.replace(/\\n/g, '\n')}`)
                 }
             },
             signal: ctrl.signal,
@@ -39,7 +42,7 @@ const Sse = () => {
             <div className=" mx-auto my-2 w-[968px] relative">
                 <h1>SSE</h1>
                 <div className="flex flex-row text-white cursor-pointer">click Me</div>
-                <div className="flex text-white">{answer}</div>
+                <div className="flex text-white whitespace-pre-line">{answer}</div>
                 <QuestionInput callback={handleSSE} />
             </div>
         </div>
@@ -58,13 +61,25 @@ const QuestionInput = ({ callback }: IQuertionInputProps) => {
         const inputEle: HTMLInputElement | null = inputRef && inputRef.current
         if (inputEle?.value) {
             callback(inputEle.value)
+            inputEle.value = ''
+        }
+    }
+
+    const handleInputKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Enter') {
+            handleSend()
         }
     }
 
     return (
         <div className=" fixed w-[968px] bottom-7">
             <div className="w-full h-12 px-2 text-sm bg-zinc-700 justify-between rounded-lg text-white shadow border border-gray-800 flex flex-row gap-1 relative">
-                <input type="text" className=" w-[95%] flex flex-inline outline-none bg-transparent" ref={inputRef} />
+                <input
+                    type="text"
+                    className=" w-[95%] flex flex-inline outline-none bg-transparent"
+                    ref={inputRef}
+                    onKeyUp={e => handleInputKeyUp(e)}
+                />
                 <div
                     className="flex bg-transparent cursor-pointer h-full align-middle items-center"
                     onClick={handleSend}

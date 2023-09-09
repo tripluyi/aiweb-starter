@@ -1,31 +1,36 @@
 'use client'
 import './style.css'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 
 const Sse = () => {
     const [answer, setAnswer] = useState<string>('')
     useEffect(() => {}, [])
 
-    const handleSSE = async () => {
+    const handleSSE = async (msg: string) => {
         // const eventSource = new EventSource('/sse/api/stream')
         // // 监听 SSE 事件的消息
         // eventSource.onmessage = function (event) {
         //     console.log('Received message:', event.data)
         // }
 
+        const ctrl = new AbortController()
         const eventSourcePost = fetchEventSource('/sse/api/stream', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                foo: 'bar',
+                foo: msg,
             }),
             onmessage: function (event) {
                 // console.log('Received message:', event.data)
                 setAnswer(answer => `${answer}\r\n${event.data}`)
+                if (event.data.includes('End')) {
+                    ctrl.abort()
+                }
             },
+            signal: ctrl.signal,
         })
     }
 
@@ -33,11 +38,9 @@ const Sse = () => {
         <div className=" w-screen bg-gray-800">
             <div className=" mx-auto my-2 w-[968px] relative">
                 <h1>SSE</h1>
-                <div className="flex flex-row text-white cursor-pointer" onClick={handleSSE}>
-                    click Me
-                </div>
+                <div className="flex flex-row text-white cursor-pointer">click Me</div>
                 <div className="flex text-white">{answer}</div>
-                <QuestionInput />
+                <QuestionInput callback={handleSSE} />
             </div>
         </div>
     )
@@ -45,12 +48,27 @@ const Sse = () => {
 
 export default Sse
 
-const QuestionInput = () => {
+interface IQuertionInputProps {
+    callback: (msg: string) => void
+}
+const QuestionInput = ({ callback }: IQuertionInputProps) => {
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    const handleSend = () => {
+        const inputEle: HTMLInputElement | null = inputRef && inputRef.current
+        if (inputEle?.value) {
+            callback(inputEle.value)
+        }
+    }
+
     return (
         <div className=" fixed w-[968px] bottom-7">
             <div className="w-full h-12 px-2 text-sm bg-zinc-700 justify-between rounded-lg text-white shadow border border-gray-800 flex flex-row gap-1 relative">
-                <input type="text" className=" w-[95%] flex flex-inline outline-none bg-transparent" />
-                <div className="flex bg-transparent cursor-pointer h-full align-middle items-center">
+                <input type="text" className=" w-[95%] flex flex-inline outline-none bg-transparent" ref={inputRef} />
+                <div
+                    className="flex bg-transparent cursor-pointer h-full align-middle items-center"
+                    onClick={handleSend}
+                >
                     <SendSvg
                         className="h-[60%] w-full items-center text-center text-gray-300"
                         color={'rgb(209 213 219 / 1)'}

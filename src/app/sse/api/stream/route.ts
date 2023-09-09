@@ -45,8 +45,11 @@ export async function POST(request: NextRequest) {
     const interval = setInterval(() => {
         counter++
 
-        if (counter > 100) {
+        if (counter > 15) {
             clearInterval(interval)
+            const message = `event: message\ndata: End\n\n`
+            const messageUint8Array = encoder.encode(message)
+            writer.write(messageUint8Array)
             return
         }
 

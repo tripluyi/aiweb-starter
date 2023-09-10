@@ -5,19 +5,19 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 
 const API_KEY = process.env.openAIApiKey || ''
-
+const model35turbo = `gpt-3.5-turbo-0613`
 const chat = new ChatOpenAI({
     maxTokens: 500,
     streaming: true,
     openAIApiKey: API_KEY,
-    modelName: 'gpt-3.5-turbo',
+    modelName: model35turbo,
 })
 
 const textCom = new OpenAI({
     maxTokens: 500,
     streaming: true,
     openAIApiKey: API_KEY,
-    modelName: 'gpt-3.5-turbo',
+    modelName: model35turbo,
 })
 
 interface IStreamMEssageProps {

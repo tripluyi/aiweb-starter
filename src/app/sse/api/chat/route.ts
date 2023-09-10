@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const result = await PaLMByLangChain({
         msgContent: msg,
     })
-    await getStreamMessage()
+
     return NextResponse.json({ ...result })
 }
 

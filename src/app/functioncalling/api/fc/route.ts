@@ -79,14 +79,28 @@ export async function POST(request: NextRequest) {
     return response
 }
 
-function getCurrentWeather({ location, unit = 'fahrenheit' }: { location: string; unit: string }) {
+function getCurrentWeather({ location, unit = 'celsius' }: { location: string; unit: string }) {
     const weatherInfo = {
         location: location,
-        temperature: '72',
+        temperature: '29',
         unit: unit,
         forecast: ['sunny', 'windy'],
     }
     return JSON.stringify(weatherInfo)
+}
+
+const getTravelProductList = async (): Promise<String> => {
+    const travelProductList = [
+        {
+            name: 'Hawaii',
+            price: '1000',
+            description:
+                'Hawaii is a U.S. state located in the Pacific Ocean. It is the only state outside North America, the only island state, and the only state in the tropics. Hawaii is also one of a handful of U.S. states to have once been an independent nation.',
+            image: 'https://images.unsplash.com/photo-1611095789929-4b7b7b0b2b0f?ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8aGF3aWF0aCUyMGhvdXNlfGVufDB8fDB8fA%3D%3D&ixlib=rb-1.2.1&w=1000&q=80',
+        },
+    ]
+
+    return JSON.stringify(travelProductList)
 }
 
 const functions = [
@@ -105,7 +119,101 @@ const functions = [
             required: ['location'],
         },
     },
+    {
+        name: 'getProductTravelList',
+        description: 'Get a list of travel products based on the given location',
+        parameters: {
+            type: 'object',
+            properties: {
+                keyword: {
+                    type: 'string',
+                    description: 'The destination keyword, e.g. Shanghai, China',
+                },
+                travelDays: {
+                    type: 'number array',
+                    description: 'The number of days of the trip, e.g. [3, 5, 7]',
+                },
+                sortType: {
+                    type: 'string',
+                    enum: ['price desc', 'price asc', 'rating desc', 'rating asc', 'suggested', 'sales'],
+                },
+            },
+            required: ['keyword'],
+        },
+    },
 ]
+
+/*
+ * @param keyword: string
+ * @param sortType: number
+ * @param travelDays: string[] | number[]
+ */
+const getProductSearchRequestByCondition = ({
+    keyword,
+    sortType,
+    travelDays,
+}: {
+    keyword: string
+    sortType: number
+    travelDays: number[]
+}) => {
+    return {
+        requestSource: 'tour',
+        client: {
+            version: '',
+            channel: 114,
+            locale: 'zh-CN',
+            currency: 'CNY',
+            source: 'NVacationSearchV2',
+            cid: '',
+            location: {
+                lat: '',
+                lon: '',
+                cityId: 2,
+                cityType: 3,
+                locatedCityId: 0,
+            },
+        },
+        destination: {
+            poid: 0,
+            type: '',
+            keyword: keyword || '',
+        },
+        filtered: {
+            tab: '64',
+            preItems: [],
+            items: travelDays?.length
+                ? [
+                      {
+                          method: 'FILTERED',
+                          type: 'TravelDays',
+                          value: travelDays?.join(),
+                      },
+                  ]
+                : [],
+            minPrice: 0,
+            maxPrice: 0,
+            beginDate: '',
+            endDate: '',
+            sort: sortType || 8,
+            pageIndex: 1,
+            pageSize: 30,
+        },
+        searchOption: {
+            returnMode: 'all',
+            filters: [],
+        },
+        productOption: {
+            needBasicInfo: true,
+            needPrice: true,
+            tagOption: ['PRODUCT_TAG'],
+        },
+        extras: {
+            USE_NEW_PRICE: 'true',
+            FILTERED_SCOPE: 'custom',
+        },
+    }
+}
 
 interface IWriteSSEMessageProps {
     text: String

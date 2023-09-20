@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getFunctionCallingMessage, getFunctionCallingMessageOpenai } from '../shared/openai'
 import type { BaseMessage } from 'langchain/schema'
 import { HumanMessage, AIMessage, AIMessageChunk, FunctionMessage, SystemMessage } from 'langchain/schema'
+import _ from 'lodash'
+
 export async function POST(request: NextRequest) {
     let rbody = {}
     try {
@@ -12,7 +14,8 @@ export async function POST(request: NextRequest) {
     // 将 SSE 数据编码为 Uint8Array
     const encoder = new TextEncoder()
     const decoder = new TextDecoder()
-    const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
+    // const sseData = `:ok\n\nevent: message\ndata: Initial message\n\n`
+    const sseData = `:ok\n\nevent: message\ndata: \n\n`
     const sseUint8Array = encoder.encode(sseData)
 
     // 创建 TransformStream
@@ -36,16 +39,17 @@ export async function POST(request: NextRequest) {
 
     // @ts-ignore
     const { message: humanMessage = '' } = rbody
-    const getAllHandler = (message: BaseMessage) => {
-        console.log(`getAllHandler`, message)
+    const getAllHandler = async (message: BaseMessage) => {
+        console.log(`getAllHandler===>`, message)
         if (message?.additional_kwargs?.function_call) {
             const availableFunctions: Record<string, Function> = {
                 getCurrentWeather: getCurrentWeather,
+                getTravelProductList: getTravelProductList,
             }
             const { name: functionName, arguments: functionArguments } = message?.additional_kwargs?.function_call || {}
             const functionToCall = availableFunctions[functionName]
             const functionArgs = JSON.parse(functionArguments)
-            const functionResponse: string = functionToCall(functionArgs)
+            const functionResponse: string = await functionToCall(functionArgs)
 
             const messages = [
                 new HumanMessage(humanMessage),
@@ -62,6 +66,9 @@ export async function POST(request: NextRequest) {
                     console.log('in getAllHandler', token)
                     writeSSEMessage({ text: token, writer: writer })
                 },
+                getAllHandler: (message: BaseMessage) => {
+                    writeSSEMessage({ text: '__completed__', writer: writer })
+                },
             })
         }
     }
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
         humanMessage: humanMessage,
         functions: functions,
         streamHanler: (token: string) => {
-            console.log(token)
+            console.log(`streamHanler==>`, token)
             writeSSEMessage({ text: token, writer: writer })
         },
         getAllHandler: getAllHandler,
@@ -89,18 +96,64 @@ function getCurrentWeather({ location, unit = 'celsius' }: { location: string; u
     return JSON.stringify(weatherInfo)
 }
 
-const getTravelProductList = async (): Promise<String> => {
-    const travelProductList = [
-        {
-            name: 'Hawaii',
-            price: '1000',
-            description:
-                'Hawaii is a U.S. state located in the Pacific Ocean. It is the only state outside North America, the only island state, and the only state in the tropics. Hawaii is also one of a handful of U.S. states to have once been an independent nation.',
-            image: 'https://images.unsplash.com/photo-1611095789929-4b7b7b0b2b0f?ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8aGF3aWF0aCUyMGhvdXNlfGVufDB8fDB8fA%3D%3D&ixlib=rb-1.2.1&w=1000&q=80',
-        },
-    ]
+const sortTypeMap: Record<string, number> = {
+    default: 8,
+    sales: 2,
+    ratingDesc: 4,
+    priceDesc: 6,
+    priceAsc: 5,
+}
+const getTravelProductList = async ({
+    keyword,
+    sortType,
+    travelDays,
+}: {
+    keyword: string
+    sortType: string
+    travelDays: number[]
+}): Promise<String> => {
+    console.log(`getTravelProductList`, { keyword, sortType, travelDays })
 
-    return JSON.stringify(travelProductList)
+    const sortTypeNumber = sortTypeMap[sortType] || sortTypeMap.default
+    const requestParams = getProductSearchRequestByCondition({ keyword, sortType: sortTypeNumber, travelDays })
+    const params = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestParams),
+    }
+
+    const url = `https://online.ctrip.com/restapi/soa2/20684/productSearch`
+    let productList: any = []
+    try {
+        const productListRes = await fetch(url, {
+            ...params,
+        })
+        const productListResult = await productListRes.json()
+        if (!_.isEmpty(productListResult?.products)) {
+            productList = _.map(productListResult?.products, (product: any) => {
+                const { basicInfo, priceInfo, tagGroups } = product || {}
+                const tags = tagGroups?.[0]?.tags
+                return {
+                    id: product?.id,
+                    name: basicInfo?.mainName,
+                    subName: basicInfo?.subName,
+                    price: priceInfo?.price,
+                    description: basicInfo?.name,
+                    tags: _.isEmpty(tags)
+                        ? []
+                        : _.map(tags, (tag: any) => {
+                              return tag?.tagName || ''
+                          }),
+                }
+            })
+        }
+    } catch (e) {
+        console.log(`getTravelProductList error`, e)
+    }
+
+    return JSON.stringify(_.take(productList, 3))
 }
 
 const functions = [
@@ -120,7 +173,7 @@ const functions = [
         },
     },
     {
-        name: 'getProductTravelList',
+        name: 'getTravelProductList',
         description: 'Get a list of travel products based on the given location',
         parameters: {
             type: 'object',
@@ -130,12 +183,16 @@ const functions = [
                     description: 'The destination keyword, e.g. Shanghai, China',
                 },
                 travelDays: {
-                    type: 'number array',
+                    type: 'array',
+                    items: {
+                        type: 'number',
+                    },
                     description: 'The number of days of the trip, e.g. [3, 5, 7]',
                 },
                 sortType: {
                     type: 'string',
-                    enum: ['price desc', 'price asc', 'rating desc', 'rating asc', 'suggested', 'sales'],
+                    enum: ['priceDesc', 'priceAsc', 'ratingDesc', 'default', 'sales'],
+                    description: 'The sort type of product list show, e.g. priceDesc',
                 },
             },
             required: ['keyword'],

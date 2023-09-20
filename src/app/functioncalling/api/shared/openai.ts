@@ -10,7 +10,7 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 const API_KEY = process.env.openAIApiKey || ''
 const model35turbo = `gpt-3.5-turbo-0613`
 const chat = new ChatOpenAI({
-    maxTokens: 500,
+    // maxTokens: 500,
     streaming: true,
     openAIApiKey: API_KEY,
     modelName: model35turbo,
@@ -44,7 +44,7 @@ export const getFunctionCallingMessage = async ({
         callbacks: [
             {
                 handleLLMNewToken(token: string) {
-                    console.log({ token })
+                    // console.log({ token })
                     streamHanler(token)
                 },
             },
@@ -54,7 +54,7 @@ export const getFunctionCallingMessage = async ({
         options.functions = functions
     }
     const response = await chat.call(callMessageList, options)
-    getAllHandler && getAllHandler(response)
+    getAllHandler && (await getAllHandler(response))
     console.log(`has single msg: ${!!humanMessage}, total response==>`, response)
 }
 

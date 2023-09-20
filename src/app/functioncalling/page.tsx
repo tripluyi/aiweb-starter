@@ -171,6 +171,7 @@ const SSEManager = (function () {
                         eventSourceInstance = null
                         ctrl.abort()
                     } else {
+                        // console.log(`event.data`, event.data);
                         callback && callback(event.data.replace(/\\n/g, '\n'))
                     }
                 },

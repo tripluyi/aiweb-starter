@@ -3,6 +3,7 @@ import { getFunctionCallingMessage, getFunctionCallingMessageOpenai } from '../s
 import type { BaseMessage } from 'langchain/schema'
 import { HumanMessage, AIMessage, AIMessageChunk, FunctionMessage, SystemMessage } from 'langchain/schema'
 import _ from 'lodash'
+import { getCurrentWeatherByCity } from '../shared/openweather'
 
 export async function POST(request: NextRequest) {
     let rbody = {}
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
                 mseeages: messages,
                 // functions: functions,
                 streamHanler: (token: string) => {
-                    // console.log('in getAllHandler', token)
+                    console.log('in getAllHandler', token)
                     writeSSEMessage({ text: token, writer: writer })
                 },
                 getAllHandler: (message: BaseMessage) => {
@@ -86,14 +87,16 @@ export async function POST(request: NextRequest) {
     return response
 }
 
-function getCurrentWeather({ location, unit = 'celsius' }: { location: string; unit: string }) {
-    const weatherInfo = {
-        location: location,
-        temperature: '29',
-        unit: unit,
-        forecast: ['sunny', 'windy'],
-    }
-    return JSON.stringify(weatherInfo)
+const getCurrentWeather = async ({
+    location,
+    countryCode,
+}: {
+    location: string
+    countryCode: string
+}): Promise<String> => {
+    const result = await getCurrentWeatherByCity({ city: location, countryCode: countryCode })
+    console.log(`getCurrentWeather`, result)
+    return JSON.stringify(result)
 }
 
 const sortTypeMap: Record<string, number> = {
@@ -167,7 +170,7 @@ const functions = [
                     type: 'string',
                     description: 'The city and state, e.g. San Francisco, CA',
                 },
-                unit: { type: 'string', enum: ['celsius', 'fahrenheit'] },
+                countryCode: { type: 'string', description: 'The country code of the city, e.g. JP ' },
             },
             required: ['location'],
         },

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
                 mseeages: messages,
                 // functions: functions,
                 streamHanler: (token: string) => {
-                    console.log('in getAllHandler', token)
+                    // console.log('in getAllHandler', token)
                     writeSSEMessage({ text: token, writer: writer })
                 },
                 getAllHandler: (message: BaseMessage) => {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         humanMessage: humanMessage,
         functions: functions,
         streamHanler: (token: string) => {
-            console.log(`streamHanler==>`, token)
+            console.log(`streamHanler token`, token)
             writeSSEMessage({ text: token, writer: writer })
         },
         getAllHandler: getAllHandler,

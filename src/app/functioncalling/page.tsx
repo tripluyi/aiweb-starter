@@ -2,22 +2,60 @@
 import './style.css'
 import { useEffect, useState, useRef } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
+import _ from 'lodash'
 
 const completedText = '__completed__'
 
+type CHATITEM = {
+    question?: string
+    answer?: string
+}
 export default function FunctionCalling() {
     const [answer, setAnswer] = useState<string>('')
+
+    const [chatList, setChatList] = useState<CHATITEM[]>([])
+    const [loading, setLoading] = useState<boolean>(false)
     useEffect(() => {}, [])
 
     const handleSSE = async (msg: string) => {
         const ctrl = new AbortController()
+        const lastChatItem = chatList[chatList.length - 1]
+        if (lastChatItem?.question === msg || loading) return
+
+        setLoading(true)
+        // setChatList(chatList => [...chatList, {question: msg}])
+
+        setChatList(chatList => {
+            let newChatList = [...chatList]
+            let lastChatItem = _.last(newChatList)
+            lastChatItem && (lastChatItem.answer = answer)
+            newChatList.push({ question: msg })
+            return newChatList
+        })
+
+        setAnswer('')
+
         SSEManager.getEventSource({
             msg,
             ctrl,
             callback: sseResult => {
+                console.log(`answer X`, answer)
                 if (sseResult === completedText) {
                     console.log(`this is completed`)
                     setAnswer(answer => `${answer}\n`)
+                    setLoading(false)
+                    // console.log(`answer....`, answer)
+                    // setChatList(chatList => {
+                    //     let newChatList = [...chatList];
+                    //     let lastChatItem = _.last(newChatList)
+                    //     lastChatItem && (lastChatItem.answer = answer)
+                    //     console.log(`answer`, answer)
+                    //     console.log(`lastChatItem`, lastChatItem)
+                    //     console.log(`newChatList`, newChatList)
+                    //     return newChatList
+                    // })
+
+                    // // setAnswer("")
                 } else {
                     setAnswer(answer => `${answer}${sseResult}`)
                 }
@@ -25,12 +63,25 @@ export default function FunctionCalling() {
         })
     }
 
+    console.log(`ChatList`, chatList)
+
     return (
         <div className=" w-screen bg-gray-800">
             <div className=" mx-auto my-2 w-[968px] relative">
-                <h1>SSE</h1>
-                {/* <div className="flex flex-row text-white cursor-pointer">click Me</div> */}
-                <div className="flex text-white whitespace-pre-line">{answer}</div>
+                <h1 className="text-gray-200 border-b-2 my-8 pb-3">Function Calling</h1>
+                {_.map(chatList, (item, index) => {
+                    return (
+                        <div key={index} className="flex flex-col gap-1 border-b border-dashed border-gray-100 mt-10">
+                            <div className="flex text-gray-100 whitespace-pre-line rounded-lg bg-slate-700 p-4">
+                                {item.question}
+                            </div>
+                            <div className="flex text-white whitespace-pre-line rounded-lg px-4 pt-3 pb-10">
+                                {item.answer || answer}
+                            </div>
+                        </div>
+                    )
+                })}
+
                 <QuestionInput callback={handleSSE} />
             </div>
         </div>
@@ -114,16 +165,13 @@ const SSEManager = (function () {
                     message: msg,
                 }),
                 onmessage: function (event) {
-                    console.log('Received message:', event.data)
+                    // console.log('Received message:', event.data)
                     if (event.data.includes(completedText)) {
-                        console.log(`this is completed`)
                         callback && callback(completedText)
-                        // setAnswer(answer => `${answer}\n`)
-                        ctrl.abort()
                         eventSourceInstance = null
+                        ctrl.abort()
                     } else {
                         callback && callback(event.data.replace(/\\n/g, '\n'))
-                        // setAnswer(answer => `${answer}${event.data.replace(/\\n/g, '\n')}`)
                     }
                 },
                 signal: ctrl.signal,

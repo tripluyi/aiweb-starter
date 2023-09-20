@@ -3,31 +3,25 @@ import './style.css'
 import { useEffect, useState, useRef } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 
+const completedText = '__completed__'
+
 export default function FunctionCalling() {
     const [answer, setAnswer] = useState<string>('')
     useEffect(() => {}, [])
 
-    const handleSSE = async (msg: string, isGET?: boolean) => {
+    const handleSSE = async (msg: string) => {
         const ctrl = new AbortController()
-        const eventSourcePost = fetchEventSource('/functioncalling/api/fc', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: msg,
-            }),
-            onmessage: function (event) {
-                console.log('Received message:', event.data)
-                if (event.data.includes('__completed__')) {
+        SSEManager.getEventSource({
+            msg,
+            ctrl,
+            callback: sseResult => {
+                if (sseResult === completedText) {
                     console.log(`this is completed`)
                     setAnswer(answer => `${answer}\n`)
-                    ctrl.abort()
                 } else {
-                    setAnswer(answer => `${answer}${event.data.replace(/\\n/g, '\n')}`)
+                    setAnswer(answer => `${answer}${sseResult}`)
                 }
             },
-            signal: ctrl.signal,
         })
     }
 
@@ -99,3 +93,54 @@ const SendSvg = ({ className, color }: { className?: string; color?: string }) =
         </svg>
     )
 }
+
+interface IEventSourceProps {
+    msg: string
+    ctrl: AbortController
+    callback?: (answer: string) => void
+}
+const SSEManager = (function () {
+    let eventSourceInstance: any = null
+
+    function createEventSource({ msg, ctrl, callback }: IEventSourceProps) {
+        if (!eventSourceInstance) {
+            // 创建 EventSource 对象
+            eventSourceInstance = fetchEventSource('/functioncalling/api/fc', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: msg,
+                }),
+                onmessage: function (event) {
+                    console.log('Received message:', event.data)
+                    if (event.data.includes(completedText)) {
+                        console.log(`this is completed`)
+                        callback && callback(completedText)
+                        // setAnswer(answer => `${answer}\n`)
+                        ctrl.abort()
+                        eventSourceInstance = null
+                    } else {
+                        callback && callback(event.data.replace(/\\n/g, '\n'))
+                        // setAnswer(answer => `${answer}${event.data.replace(/\\n/g, '\n')}`)
+                    }
+                },
+                signal: ctrl.signal,
+                openWhenHidden: true, // https://github.com/Azure/fetch-event-source/issues/51
+            })
+        }
+    }
+
+    function getEventSource(props: IEventSourceProps) {
+        if (!eventSourceInstance) {
+            return createEventSource(props)
+        }
+        console.log(`I have been created`)
+        return eventSourceInstance
+    }
+
+    return {
+        getEventSource,
+    }
+})()

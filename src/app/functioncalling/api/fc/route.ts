@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     writer.write(sseUint8Array)
 
     // @ts-ignore
-    const { message: humanMessage = '' } = rbody
+    const { message: humanMessage = '' } = rbody || {}
     const getAllHandler = async (message: BaseMessage) => {
         console.log(`getAllHandler===>`, message)
         if (message?.additional_kwargs?.function_call) {

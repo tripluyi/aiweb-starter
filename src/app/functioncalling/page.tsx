@@ -39,7 +39,6 @@ export default function FunctionCalling() {
             msg,
             ctrl,
             callback: sseResult => {
-                console.log(`answer X`, answer)
                 if (sseResult === completedText) {
                     console.log(`this is completed`)
                     setAnswer(answer => `${answer}\n`)
@@ -165,7 +164,7 @@ const SSEManager = (function () {
                     message: msg,
                 }),
                 onmessage: function (event) {
-                    // console.log('Received message:', event.data)
+                    console.log('Received message:', event.data)
                     if (event.data.includes(completedText)) {
                         callback && callback(completedText)
                         eventSourceInstance = null
@@ -174,6 +173,16 @@ const SSEManager = (function () {
                         // console.log(`event.data`, event.data);
                         callback && callback(event.data.replace(/\\n/g, '\n'))
                     }
+                },
+                onclose() {
+                    console.log(`on close`, eventSourceInstance)
+                    eventSourceInstance = null
+                    ctrl.abort()
+                },
+                onerror(err) {
+                    console.log(`on err`, err)
+                    eventSourceInstance = null
+                    ctrl.abort()
                 },
                 signal: ctrl.signal,
                 openWhenHidden: true, // https://github.com/Azure/fetch-event-source/issues/51

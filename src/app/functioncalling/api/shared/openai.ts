@@ -9,11 +9,12 @@ import { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
 const API_KEY = process.env.openAIApiKey || ''
 const model35turbo = `gpt-3.5-turbo-0613`
+const model35turbo16k = `gpt-3.5-turbo-16k-0613`
 const chat = new ChatOpenAI({
     // maxTokens: 500,
     streaming: true,
     openAIApiKey: API_KEY,
-    modelName: model35turbo,
+    modelName: model35turbo16k,
 })
 
 const openai = new OpenAI({

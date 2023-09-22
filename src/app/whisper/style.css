@@ -1,0 +1,7 @@
+body{
+    --tw-bg-opacity: 1;
+    background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+    --foreground-rgb: 31 41 55;
+    --background-start-rgb: rgb(31 41 55 / var(--tw-bg-opacity));
+    --background-end-rgb: rgb(31 41 55 / var(--tw-bg-opacity));
+}

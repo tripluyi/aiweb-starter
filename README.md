@@ -1,15 +1,33 @@
 # aiweb-starter
 
-## Getting Started
+## 开始
 
-First, run the development server:
-
+安装
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+npm i
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+启动
+```bash
+npm run dev
+```
+
+
+## 使用
+该项目中，每一个例子都可以独立运行，代码互不影响。
+
+### function calling
+http://localhost:3000/functioncalling
+
+
+### Server-sent Event
+http://localhost:3000/sse
+
+
+### Whisper
+http://localhost:3000/whisper
+
+
+
+
+

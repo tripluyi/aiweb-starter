@@ -19,9 +19,12 @@ npm run dev
 ### function calling
 http://localhost:3000/functioncalling
 
+使用介绍：[OpenAI Function Calling的使用](https://aiweb.viku.org/practice/openai-function-calling-de-shi-yong)
 
 ### Server-sent Event
 http://localhost:3000/sse
+
+使用介绍：[Server-Sent Events流式对话](https://aiweb.viku.org/practice/serversent-events-liu-shi-dui-hua)
 
 
 ### Whisper

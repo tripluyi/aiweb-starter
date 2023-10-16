@@ -1,5 +1,5 @@
 # aiweb-starter
-这是一个关于 AI 接口调用仓库，更多介绍可以查看 [Wiki](https://ctrip.wiki/)
+这是一个关于 AI 调用示例的仓库，更多介绍可以查看 [Wiki](https://ctrip.wiki/)
 
 ## 开始
 

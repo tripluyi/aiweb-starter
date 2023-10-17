@@ -17,6 +17,12 @@ npm run dev
 ## 使用
 该项目中，每一个例子都可以独立运行，代码互不影响。
 
+初次使用，需要创建.env 文件，并将 .env.example 内示例环境变量拷贝至 .env，填入自己真实的API Key
+```bash
+mv .env.example .env
+```
+<br />
+
 |case|启动地址|使用介绍|
 |--|--|--|
 |**function calling**|http://localhost:3000/functioncalling|[OpenAI Function Calling的使用](https://aiweb.viku.org/practice/openai-function-calling)|
